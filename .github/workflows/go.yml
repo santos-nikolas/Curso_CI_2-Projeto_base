@@ -27,6 +27,25 @@ jobs:
     - name: Create-DB
       run: docker compose up -d
 
+    - name: Wait for Postgres
+      run: |
+        set -e
+        DB_CONTAINER=$(docker compose ps -q postgres)
+        echo "Postgres container: $DB_CONTAINER"
+
+        for i in {1..40}; do
+          if docker exec "$DB_CONTAINER" pg_isready -U root -d root; then
+            echo "Postgres is ready!"
+            exit 0
+          fi
+          echo "Waiting for Postgres... ($i/40)"
+          sleep 1
+        done
+
+        echo "Postgres did not become ready in time. Logs:"
+        docker compose logs postgres
+        exit 1
+
     - name: Test
       run: go test -v main_test.go 
       
